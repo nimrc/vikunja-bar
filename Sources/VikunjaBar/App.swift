@@ -18,7 +18,7 @@ enum Entry {
     }
 }
 
-/// Renders the panel to a PNG. Uses VIKUNJA_URL and VIKUNJA_TOKEN when set, else the saved login.
+/// Shows the panel in a window and screenshots it to a PNG. Uses VIKUNJA_URL and VIKUNJA_TOKEN when set, else the saved login.
 /// Routes: overview, projects, project:<id>, task:<id>, search:<text>, settings.
 @MainActor func snapshot(to path: String, route: String) async {
     _ = NSApplication.shared
@@ -52,19 +52,22 @@ enum Entry {
     default: break
     }
 
-    let host = NSHostingView(rootView: panel.start(start).environment(\.colorScheme, .light))
+    let host = NSHostingView(rootView: panel.start(start))
     let size = NSSize(width: Panel.width, height: Panel.height)
-    let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless],
+    let window = NSWindow(contentRect: NSRect(origin: NSPoint(x: 80, y: 80), size: size), styleMask: [.borderless],
                           backing: .buffered, defer: false)
     window.backgroundColor = .windowBackgroundColor
     window.contentView = host
-    for _ in 0..<4 {
-        host.layoutSubtreeIfNeeded()
-        try? await Task.sleep(for: .milliseconds(250))
-    }
-    guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return }
-    host.cacheDisplay(in: host.bounds, to: rep)
-    try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
+    window.level = .floating
+    window.orderFrontRegardless()
+    // Glass is composited by the window server, so capture the real window rather than the view.
+    try? await Task.sleep(for: .seconds(1.5))
+    let capture = Process()
+    capture.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+    capture.arguments = ["-o", "-x", "-l", String(window.windowNumber), path]
+    try? capture.run()
+    capture.waitUntilExit()
+    window.orderOut(nil)
     if let e = store.error { print("error: \(e)") }
     print("\(path) \(Int(size.width))x\(Int(size.height))")
 }

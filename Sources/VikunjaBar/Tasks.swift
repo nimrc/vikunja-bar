@@ -100,11 +100,13 @@ struct LabelChip: View {
     let label: VikunjaCore.Label
 
     var body: some View {
+        let color = Color(hex: label.hexColor) ?? .gray
         Text(label.title)
             .font(.caption2.weight(.medium))
+            .foregroundStyle(color)
             .padding(.horizontal, 6)
             .padding(.vertical, 1)
-            .glassEffect(.regular.tint((Color(hex: label.hexColor) ?? .gray).opacity(0.5)), in: .capsule)
+            .background(color.opacity(0.15), in: .capsule)
     }
 }
 
