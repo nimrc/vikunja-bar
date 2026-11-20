@@ -183,3 +183,47 @@ final class StubProtocol: URLProtocol, @unchecked Sendable {
 
     override func stopLoading() {}
 }
+
+@Suite struct SessionTests {
+    let description = """
+    **当前进展**: token id=3 已建
+
+    **仓库**: vikunja
+
+    **目录**: /Users/tswang/code/app/vikunja
+
+    **Agent**: claude · herdr w1:p3
+
+    **会话**: F5E492DE-8C0A-4E54-BF86-440BA2A4E354
+    """
+
+    @Test func parsesAgentBoardFields() {
+        let f = CardFields.parse(description)
+        #expect(f["仓库"] == "vikunja")
+        #expect(f["Agent"] == "claude · herdr w1:p3")
+        #expect(f["当前进展"] == "token id=3 已建")
+    }
+
+    @Test func buildsResumeCommands() throws {
+        let s = try #require(AgentSession(fields: CardFields.parse(description)))
+        #expect(s.resumeCommand == "claude --resume f5e492de-8c0a-4e54-bf86-440ba2a4e354")
+        #expect(s.shellCommand == "cd '/Users/tswang/code/app/vikunja' && claude --resume f5e492de-8c0a-4e54-bf86-440ba2a4e354")
+        #expect(s.ghosttyScript.contains(#"set initial working directory of cfg to "/Users/tswang/code/app/vikunja""#))
+    }
+
+    @Test func quotesAwkwardPaths() throws {
+        let s = try #require(AgentSession(fields: ["目录": #"/tmp/it's "x""#, "会话": UUID().uuidString]))
+        #expect(s.shellCommand.hasPrefix(#"cd '/tmp/it'\''s "x"' && "#))
+        #expect(s.ghosttyScript.contains(#"to "/tmp/it's \"x\"""#))
+    }
+
+    @Test(arguments: [
+        ["目录": "/x"],
+        ["会话": "f5e492de-8c0a-4e54-bf86-440ba2a4e354"],
+        ["目录": "relative", "会话": "f5e492de-8c0a-4e54-bf86-440ba2a4e354"],
+        ["目录": "/x", "会话": "not-a-uuid; rm -rf /"],
+    ])
+    func rejectsIncompleteOrUnsafeFields(fields: [String: String]) {
+        #expect(AgentSession(fields: fields) == nil)
+    }
+}

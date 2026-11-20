@@ -86,6 +86,10 @@ struct TaskDetailView: View {
             }
             .font(.callout)
 
+            if let session = AgentSession(fields: CardFields.parse(task.description)) {
+                SessionBox(store: store, session: session)
+            }
+
             if !task.description.isEmpty {
                 Divider()
                 Markdown(text: task.description)
@@ -133,5 +137,66 @@ struct Markdown: View {
         let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         let rendered = (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
         Text(rendered).font(.callout).textSelection(.enabled)
+    }
+}
+
+/// Resumes the Claude Code session an agent-board card records.
+struct SessionBox: View {
+    let store: Store
+    let session: AgentSession
+    @State private var copied = false
+
+    var body: some View {
+        let exists = Self.directoryExists(session.directory)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "terminal")
+                Text("Claude 会话").font(.headline)
+            }
+            Text(session.directory)
+                .font(.caption.monospaced())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .textSelection(.enabled)
+            HStack {
+                Button {
+                    resume()
+                } label: {
+                    Label("在 Ghostty 恢复", systemImage: "play.fill")
+                }
+                .buttonStyle(.glassProminent)
+                .disabled(!exists)
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(session.shellCommand, forType: .string)
+                    copied = true
+                } label: {
+                    Label(copied ? "已复制" : "复制命令", systemImage: copied ? "checkmark" : "doc.on.doc")
+                }
+                .buttonStyle(.glass)
+            }
+            if !exists {
+                Text("目录已不存在（worktree 可能已清理），无法在原目录恢复。")
+                    .font(.caption).foregroundStyle(.orange)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+    }
+
+    private func resume() {
+        var info: NSDictionary?
+        NSAppleScript(source: session.ghosttyScript)?.executeAndReturnError(&info)
+        if let info {
+            let message = info[NSAppleScript.errorMessage] as? String ?? "未知错误"
+            store.error = "打开 Ghostty 失败：\(message)"
+        }
+    }
+
+    static func directoryExists(_ path: String) -> Bool {
+        var isDir: ObjCBool = false
+        return FileManager.default.fileExists(atPath: path, isDirectory: &isDir) && isDir.boolValue
     }
 }
