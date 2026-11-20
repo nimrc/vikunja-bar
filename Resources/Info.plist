@@ -11,5 +11,6 @@
 	<key>CFBundleVersion</key><string>1</string>
 	<key>LSMinimumSystemVersion</key><string>26.0</string>
 	<key>LSUIElement</key><true/>
+	<key>NSAppleEventsUsageDescription</key><string>在 Ghostty 中打开终端，恢复卡片记录的 Claude Code 会话。</string>
 </dict>
 </plist>

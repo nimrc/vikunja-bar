@@ -38,6 +38,8 @@ The token is checked against `/api/v2/user` before it is saved to the login keyc
 - **Search**: the search field queries every project.
 - **Task**: dates, priority, labels, assignees, the description and comments (fetched as Markdown), and a button that opens the task in the browser.
 
+- **Claude 会话**: on a card from the agent board (one with `目录` and `会话` lines), **在 Ghostty 恢复** opens a new Ghostty window in that directory and types `claude --resume <会话>` into your shell; **复制命令** copies `cd <目录> && claude --resume <会话>`. The button is off when the directory is gone (a cleaned-up worktree). The first use asks for permission to control Ghostty.
+
 Data refreshes every 5 minutes and when the panel opens if it is more than a minute old.
 
 ## Development
